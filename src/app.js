@@ -1,6 +1,7 @@
 const express = require("express");
 const authRoute = require("./Auth/authRoutes");
 const postRoutes = require("./Posts/postRoutes");
+const commentRoutes = require("./comments/commentsRoutes");
 const app = express();
 
 // Middleware to parse JSON request bodies
@@ -14,4 +15,5 @@ app.get("/test", (req, res) => {
 
 app.use("/auth/", authRoute);
 app.use("/", postRoutes);
+app.use("/", commentRoutes);
 module.exports = app;

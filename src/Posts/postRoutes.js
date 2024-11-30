@@ -6,6 +6,7 @@ const {
   updateSinglePosts,
   deleteSinglePosts,
 } = require("./postController");
+const authenticate = require("../middlewares/authenticate");
 const postRoutes = express.Router();
 
 postRoutes.post("/posts", createPost);

@@ -1,20 +1,35 @@
 const Post = require("../model/Post");
+const User = require("../model/User");
+// Create a new post
+
 const createPost = async (req, res) => {
   const { title, content, author } = req.body;
+
   try {
+    // Create a new post without author first
     const newPost = await Post.create({ title, content, author });
-    // const newPost = new Post({ title, content, author });
-    await newPost.save();
-    res.status(201).json(newPost);
+
+    // Populate the 'author' field to get the name from the User model
+    const populatedPost = await newPost.populate("author", "name");
+
+    // Send response with the populated post
+    res
+      .status(201)
+      .json({ newPost: populatedPost, message: "Post created successfully!" });
   } catch (error) {
-    res.status(500).json({ message: "Error creating post" });
+    res
+      .status(500)
+      .json({ message: "Error creating post", error: error.message });
   }
 };
-const allPosts = async () => {
+const allPosts = async (req, res) => {
   //   const { title, content, author } = req.body;
   try {
-    const posts = await Post.find();
+    const posts = await Post.find()
+      .populate("author", "name") // Populate author with user's name
+      .populate("comments");
     console.log("all posts are", posts);
+    res.json(posts);
   } catch (error) {
     console.log(error);
   }
@@ -23,7 +38,9 @@ const allPosts = async () => {
 const getSinglePosts = async (req, res, next) => {
   const id = req.params.id;
   try {
-    const post = await Post.findById(id);
+    const post = await Post.findById(id)
+      .populate("author", "name")
+      .populate("comments");
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
