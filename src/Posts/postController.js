@@ -1,42 +1,72 @@
 const Post = require("../model/Post");
-const User = require("../model/User");
-// Create a new post
+const cloudinary = require("../config/cloudinary");
+const mongoose = require("mongoose");
 
+const isValidObjectId = mongoose.Types.ObjectId.isValid;
+
+// Create a new post
 const createPost = async (req, res) => {
   const { title, content, author } = req.body;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ message: "Image is required" });
+  }
 
   try {
-    // Create a new post without author first
-    const newPost = await Post.create({ title, content, author });
+    // Upload image to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(file.path, {
+      folder: "posts",
+      public_id: "post_" + Date.now(),
+    });
+    const imageUrl = uploadResult.secure_url;
+    console.log("Uploaded Image URL:", imageUrl.secure_url);
 
-    // Populate the 'author' field to get the name from the User model
+    // Create the post
+    const newPost = await Post.create({
+      title,
+      content,
+      author,
+      comments: [],
+      image: imageUrl, // Store Cloudinary URL
+    });
+
     const populatedPost = await newPost.populate("author", "name");
-
-    // Send response with the populated post
-    res
-      .status(201)
-      .json({ newPost: populatedPost, message: "Post created successfully!" });
+    res.status(201).json({
+      postId: populatedPost._id,
+      newPost: populatedPost,
+      uploadResult: imageUrl,
+      message: "Post created successfully!",
+    });
   } catch (error) {
+    console.error("Error creating post:", error);
     res
       .status(500)
       .json({ message: "Error creating post", error: error.message });
   }
 };
+
+// Get all posts
 const allPosts = async (req, res) => {
-  //   const { title, content, author } = req.body;
   try {
     const posts = await Post.find()
-      .populate("author", "name") // Populate author with user's name
+      .populate("author", "name")
       .populate("comments");
-    console.log("all posts are", posts);
     res.json(posts);
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching posts:", error);
+    res.status(500).json({ message: "Error fetching posts" });
   }
 };
-// logic for single posts
-const getSinglePosts = async (req, res, next) => {
-  const id = req.params.id;
+
+// Get a single post
+const getSinglePosts = async (req, res) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid post ID" });
+  }
+
   try {
     const post = await Post.findById(id)
       .populate("author", "name")
@@ -45,44 +75,73 @@ const getSinglePosts = async (req, res, next) => {
       return res.status(404).json({ message: "Post not found" });
     }
     res.json(post);
-    console.log(post);
   } catch (error) {
-    res.status(500).json({ message: "Error getting post" });
+    console.error("Error fetching post:", error);
+    res.status(500).json({ message: "Error fetching post" });
   }
 };
 
-// update single post
+// Update a post
 const updateSinglePosts = async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const { title, content, author } = req.body;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid post ID" });
+  }
+
   try {
-    const post = await Post.findByIdAndUpdate(
+    const updatedPost = await Post.findByIdAndUpdate(
       id,
       { title, content, author },
       { new: true }
-    );
-    res.json(post);
-  } catch (error) {}
-};
-// delete single post
-const deleteSinglePosts = async (req, res) => {
-  const id = req.params.id;
-  try {
-    const post = await Post.findByIdAndDelete(id);
-    if (!post) {
+    ).populate("author", "name");
+    if (!updatedPost) {
       return res.status(404).json({ message: "Post not found" });
     }
-    res.json({ message: "Post deleted successfully" });
+    res.json(updatedPost);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error deleting post", error: error.message });
+    console.error("Error updating post:", error);
+    res.status(500).json({ message: "Error updating post" });
   }
 };
+
+// Delete a post
+const deleteSinglePosts = async (req, res) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid post ID" });
+  }
+
+  try {
+    const deletedPost = await Post.findByIdAndDelete(id);
+    if (!deletedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    res.json({ message: "Post deleted successfully", deletedPost });
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    res.status(500).json({ message: "Error deleting post" });
+  }
+};
+
+// Count posts
+const postCount = async (req, res) => {
+  try {
+    const count = await Post.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    console.error("Error counting posts:", error);
+    res.status(500).json({ message: "Error counting posts" });
+  }
+};
+
 module.exports = {
   createPost,
   allPosts,
   getSinglePosts,
   updateSinglePosts,
   deleteSinglePosts,
+  postCount,
 };

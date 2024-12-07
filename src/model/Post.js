@@ -9,11 +9,18 @@ const postSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    image: { type: String },
     content: {
       type: String,
       required: true,
     },
-
+    category: {
+      type: String,
+      // required: true,
+    },
+    views: {
+      type: Number,
+    },
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -21,6 +28,7 @@ const postSchema = new mongoose.Schema(
     }, // Reference to User model
     comments: [
       {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         type: mongoose.Schema.Types.ObjectId,
         ref: "Comment", // Reference to the Comment model
       },
