@@ -1,0 +1,15 @@
+/* For dynamic expansion */
+.post-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.single-post-content {
+  padding: 10px;
+}
+
+/* .comments-section {
+  max-height: 500px; /* Optional, depending on the layout */
+/* overflow-y: auto; Enable scrolling if content exceeds */
+/* } */
